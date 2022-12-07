@@ -1,0 +1,40 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - when: always
+
+include:
+  - project: integration-modernization/shared-pipeline-library
+    file: gitlab-templates/gradle/v2/gradle-gitlab-ci.yml
+    ref: master
+
+variables:
+  VERSION: v1.0.0
+  NAME_SPACE: marketing
+  APP_NAME: loyaltyconsumer
+
+  ## TEST CONFIGURATION ##
+  UNITTEST: Enabled
+  PERFTEST: Disabled
+  INTTEST: Enabled
+
+  ## DOCKER CONTAINER & IMAGE CONFIGURATION ##
+  CI_GRADLE_IMAGE: gradle:jdk17
+  REGISTRY_URL: ${CI_REGISTRY}/${CI_REGISTRY_NAME}/$APP_NAME
+  CI_SERVICE_INITIAL_DELAY_SECONDS: 180
+
+  ## SWAGGERHUB CONFIGURATION ##
+  # IMPORTANT: Please disable CI_SWAGGER_HUB_JOBS if your application is a Kafka consumer.
+  CI_SWAGGER_HUB_JOBS: Disabled
+  CI_SWAGGER_SPEC_LOCATION: ${CI_PROJECT_DIR}/src/main/resources/static
+  CI_SWAGGER_SPEC_FILENAME: openapi.yaml
+
+## NEOLOAD CONFIGURATION ##
+#  NEOLOAD_SCENARIO: YOUR-NEOLOAD-TEST-SCENARIO-NAME
+#  NEOLOAD_TEST: YOUR-NEOLOAD-TEST-NAME
+
+## KAFKA CONSUMER CONFIGURATION ##
+# IMPORTANT: Please uncomment following section and set appropriate values if you want to enable autoscaling in your Kafka consumer application.
+#  COOLDOWNPERIOD: 50 #how often (in seconds) keda will check for consumer lag before scaling up/ down the application
+#  TOPICLAG: 10 #consumer lag threshold to scale up/ down the application

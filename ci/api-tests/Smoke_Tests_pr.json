@@ -1,0 +1,1426 @@
+{
+  "info": {
+    "_postman_id": "47df741f-4534-49df-bb03-972d77688011",
+    "name": "gdi.es.loyalty.consumer.sales - Integration Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "DTC A&F US",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let response = pm.response.json();\r",
+                  "let result = response.result;\r",
+                  "\r",
+                  "pm.test(\"Check For Tracking Number\", () => {\r",
+                  "  pm.expect(response.result.TrackingNo).to.not.equal(null);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Verifying order id.\", ()=> {\r",
+                  "    pm.expect(result.Order_Number).and.to.be.a(\"string\");\r",
+                  "});\r",
+                  "pm.test(\"Verifying Tracking id\", ()=> {\r",
+                  "    pm.expect(result.TrackingNo).and.to.be.a(\"string\")\r",
+                  "})\r",
+                  "\r",
+                  "pm.collectionVariables.set(\"trackingNumber\", response.result.TrackingNo);\r",
+                  "pm.collectionVariables.set(\"orderNumber\", response.result.Order_Number);\r",
+                  ""
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {
+              "accept": true,
+              "content-type": true
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"countryBrand\": \"a-us\",\r\n    \"orderStatus\": \"shipped\"\r\n}"
+            },
+            "url": {
+              "raw": "http://suqatascthqa001.homeoffice.anfcorp.com:8090/taas/orderFlow/DTCOrder",
+              "protocol": "http",
+              "host": [
+                "suqatascthqa001",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "port": "8090",
+              "path": [
+                "taas",
+                "orderFlow",
+                "DTCOrder"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Order - Shipment Open",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//check for Shipment Open status code, which will be '1600.002.005'\r",
+                  "let responseJson = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Validate For Shipment Open Status Code\", () => {\r",
+                  "  pm.expect(responseJson.Container[0].Shipment.Status).to.eql(\"1600.002.005\");\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "setTimeout(function(){}, [5000]);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "password",
+                  "value": "passw0rd",
+                  "type": "string"
+                },
+                {
+                  "key": "username",
+                  "value": "cc-itest",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "<Container>\r\n\t<ComplexQuery>\r\n\t\t<Exp Name=\"TrackingNo\" QryType=\"EQ\" Value=\"{{trackingNumber}}\" />\r\n\t</ComplexQuery>\r\n</Container>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://omsqa.homeoffice.anfcorp.com/smcfs/restapi/invoke/getShipmentContainerList?_templateKey=dn_getShipmtContnerLst",
+              "protocol": "https",
+              "host": [
+                "omsqa",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "path": [
+                "smcfs",
+                "restapi",
+                "invoke",
+                "getShipmentContainerList"
+              ],
+              "query": [
+                {
+                  "key": "_templateKey",
+                  "value": "dn_getShipmtContnerLst"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delivery Notification - In Transit",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');\r",
+                  "\r",
+                  "pm.environment.set('currentDate', moment().format((\"YYYY-MM-DD\")));\r",
+                  "\r",
+                  "pm.environment.set('currentTime', moment().format((\"HH:mm:ss\")));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", () => {\r",
+                  "  pm.response.to.have.status(204);\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Correlation-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"shipment_id\": \"{{$guid}}\",\r\n  \"carrier_scac\": \"{{$isoTimestamp}}\",\r\n  \"carrier_name\": \"KIZHUPADA\",\r\n  \"tracking_number\": \"{{trackingNumber}}\",\r\n  \"event_type\": \"in_transit\",\r\n  \"bill_of_lading_number\": \"XP73892\",\r\n  \"reference_number\": \"5084946851\",\r\n  \"order_numbers\": [\r\n    \"{{orderNumber}}\"\r\n  ],\r\n  \"event_details\": {\r\n    \"description\": \"Revised Estimated Delivery Date to 02/16/18 - Later\",\r\n    \"local_date\": \"{{currentDate}}\",\r\n    \"local_time\": \"{{currentTime}}\",\r\n    \"type\": \"convey_revised_edd_later\",\r\n    \"utc_offset\": \"Z\",\r\n    \"revised_edd\": \"2018-02-16\",\r\n    \"original_edd\": \"2018-02-14\"\r\n  },\r\n    \"shipment_info\": {\r\n    \"estimated_delivery_date\": \"{{currentDate}}\",\r\n    \"original_estimated_delivery_date\": \"2018-02-14\",\r\n    \"status\": \"in_transit\"\r\n  },\r\n  \"delivery_appointment\": {\r\n    \"delivery_appointment_required\": true,\r\n    \"delivery_appointment_message\": \"Delivery appointment message\",\r\n    \"delivery_appointment_date\": \"2017-11-07\",\r\n    \"delivery_appointment_begin_time\": \"10:00:00\",\r\n    \"delivery_appointment_end_time\": \"12:00:00\",\r\n    \"delivery_appointment_begin_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"10:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n    \"delivery_appointment_end_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"12:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n   \"original_delivery_appointment_date\": \"2017-11-01\"\r\n  },\r\n  \"created_date_time\": \"2018-02-14T09:48:01Z\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://{{hostname}}/deliverynotificationproducer/v1/supplychain/v1/carrier-status/delivery-notifications/",
+              "protocol": "https",
+              "host": [
+                "{{hostname}}"
+              ],
+              "path": [
+                "deliverynotificationproducer",
+                "v1",
+                "supplychain",
+                "v1",
+                "carrier-status",
+                "delivery-notifications",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Order - In Transit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//check for In Transit status code, which will be '1600.002.001'\r",
+                  "let responseJson = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Validate For In Transit Status Code\", () => {\r",
+                  "  pm.expect(responseJson.Container[0].Shipment.Status).to.eql(\"1600.002.001\");\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "setTimeout(function(){}, [5000]);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "password",
+                  "value": "passw0rd",
+                  "type": "string"
+                },
+                {
+                  "key": "username",
+                  "value": "cc-itest",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "<Container>\r\n\t<ComplexQuery>\r\n\t\t<Exp Name=\"TrackingNo\" QryType=\"EQ\" Value=\"{{trackingNumber}}\"/>\r\n\t</ComplexQuery>\r\n</Container>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://omsqa.homeoffice.anfcorp.com/smcfs/restapi/invoke/getShipmentContainerList?_templateKey=dn_getShipmtContnerLst",
+              "protocol": "https",
+              "host": [
+                "omsqa",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "path": [
+                "smcfs",
+                "restapi",
+                "invoke",
+                "getShipmentContainerList"
+              ],
+              "query": [
+                {
+                  "key": "_templateKey",
+                  "value": "dn_getShipmtContnerLst"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delivery Notification - Exception",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", () => {\r",
+                  "  pm.response.to.have.status(204);\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');\r",
+                  "\r",
+                  "pm.environment.set('currentDate', moment().format((\"YYYY-MM-DD\")));\r",
+                  "\r",
+                  "pm.environment.set('currentTime', moment().format((\"HH:mm:ss\")));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Correlation-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"shipment_id\": \"{{$guid}}\",\r\n  \"carrier_scac\": \"{{$isoTimestamp}}\",\r\n  \"carrier_name\": \"KIZHUPADA\",\r\n  \"tracking_number\": \"{{trackingNumber}}\",\r\n  \"event_type\": \"exception\",\r\n  \"bill_of_lading_number\": \"XP73892\",\r\n  \"reference_number\": \"5084946851\",\r\n  \"order_numbers\": [\r\n    \"{{orderNumber}}\"\r\n  ],\r\n  \"event_details\": {\r\n    \"description\": \"Revised Estimated Delivery Date to 02/16/18 - Later\",\r\n    \"local_date\": \"{{currentDate}}\",\r\n    \"local_time\": \"{{currentTime}}\",\r\n    \"type\": \"convey_revised_edd_later\",\r\n    \"utc_offset\": \"Z\",\r\n    \"revised_edd\": \"2018-02-16\",\r\n    \"original_edd\": \"2018-02-14\"\r\n  },\r\n    \"shipment_info\": {\r\n    \"estimated_delivery_date\": \"{{currentDate}}\",\r\n    \"original_estimated_delivery_date\": \"2018-02-14\",\r\n    \"status\": \"exception\"\r\n  },\r\n  \"delivery_appointment\": {\r\n    \"delivery_appointment_required\": true,\r\n    \"delivery_appointment_message\": \"Delivery appointment message\",\r\n    \"delivery_appointment_date\": \"2017-11-07\",\r\n    \"delivery_appointment_begin_time\": \"10:00:00\",\r\n    \"delivery_appointment_end_time\": \"12:00:00\",\r\n    \"delivery_appointment_begin_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"10:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n    \"delivery_appointment_end_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"12:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n   \"original_delivery_appointment_date\": \"2017-11-01\"\r\n  },\r\n  \"created_date_time\": \"2018-02-14T09:48:01Z\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://{{hostname}}/deliverynotificationproducer/v1/supplychain/v1/carrier-status/delivery-notifications/",
+              "protocol": "https",
+              "host": [
+                "{{hostname}}"
+              ],
+              "path": [
+                "deliverynotificationproducer",
+                "v1",
+                "supplychain",
+                "v1",
+                "carrier-status",
+                "delivery-notifications",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Order - Exception",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//check for Exception status code, which will be '1600.002.002'\r",
+                  "let responseJson = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Validate For Exception Status Code\", () => {\r",
+                  "  pm.expect(responseJson.Container[0].Shipment.Status).to.eql(\"1600.002.002\");\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "setTimeout(function(){}, [5000]);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "password",
+                  "value": "passw0rd",
+                  "type": "string"
+                },
+                {
+                  "key": "username",
+                  "value": "cc-itest",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "<Container>\r\n\t<ComplexQuery>\r\n\t\t<Exp Name=\"TrackingNo\" QryType=\"EQ\" Value=\"{{trackingNumber}}\" />\r\n\t</ComplexQuery>\r\n</Container>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://omsqa.homeoffice.anfcorp.com/smcfs/restapi/invoke/getShipmentContainerList?_templateKey=dn_getShipmtContnerLst",
+              "protocol": "https",
+              "host": [
+                "omsqa",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "path": [
+                "smcfs",
+                "restapi",
+                "invoke",
+                "getShipmentContainerList"
+              ],
+              "query": [
+                {
+                  "key": "_templateKey",
+                  "value": "dn_getShipmtContnerLst"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delivery Notification - Out For Delivery",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", () => {\r",
+                  "  pm.response.to.have.status(204);\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');\r",
+                  "\r",
+                  "pm.environment.set('currentDate', moment().format((\"YYYY-MM-DD\")));\r",
+                  "\r",
+                  "pm.environment.set('currentTime', moment().format((\"HH:mm:ss\")));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Correlation-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"shipment_id\": \"{{$guid}}\",\r\n  \"carrier_scac\": \"{{$isoTimestamp}}\",\r\n  \"carrier_name\": \"KIZHUPADA\",\r\n  \"tracking_number\": \"{{trackingNumber}}\",\r\n  \"event_type\": \"out_for_delivery\",\r\n  \"bill_of_lading_number\": \"XP73892\",\r\n  \"reference_number\": \"5084946851\",\r\n  \"order_numbers\": [\r\n    \"{{orderNumber}}\"\r\n  ],\r\n  \"event_details\": {\r\n    \"description\": \"Revised Estimated Delivery Date to 02/16/18 - Later\",\r\n    \"local_date\": \"{{currentDate}}\",\r\n    \"local_time\": \"{{currentTime}}\",\r\n    \"type\": \"convey_revised_edd_later\",\r\n    \"utc_offset\": \"Z\",\r\n    \"revised_edd\": \"2018-02-16\",\r\n    \"original_edd\": \"2018-02-14\"\r\n  },\r\n    \"shipment_info\": {\r\n    \"estimated_delivery_date\": \"{{currentDate}}\",\r\n    \"original_estimated_delivery_date\": \"2018-02-14\",\r\n    \"status\": \"out_for_delivery\"\r\n  },\r\n  \"delivery_appointment\": {\r\n    \"delivery_appointment_required\": true,\r\n    \"delivery_appointment_message\": \"Delivery appointment message\",\r\n    \"delivery_appointment_date\": \"2017-11-07\",\r\n    \"delivery_appointment_begin_time\": \"10:00:00\",\r\n    \"delivery_appointment_end_time\": \"12:00:00\",\r\n    \"delivery_appointment_begin_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"10:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n    \"delivery_appointment_end_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"12:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n   \"original_delivery_appointment_date\": \"2017-11-01\"\r\n  },\r\n  \"created_date_time\": \"2018-02-14T09:48:01Z\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://{{hostname}}/deliverynotificationproducer/v1/supplychain/v1/carrier-status/delivery-notifications/",
+              "protocol": "https",
+              "host": [
+                "{{hostname}}"
+              ],
+              "path": [
+                "deliverynotificationproducer",
+                "v1",
+                "supplychain",
+                "v1",
+                "carrier-status",
+                "delivery-notifications",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Order - Out For Delivery",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//check for Out For Delivery status code, which will be '1600.002.003'\r",
+                  "let responseJson = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Validate For Out For Delivery Status Code\", () => {\r",
+                  "  pm.expect(responseJson.Container[0].Shipment.Status).to.eql(\"1600.002.003\");\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "setTimeout(function(){}, [5000]);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "password",
+                  "value": "passw0rd",
+                  "type": "string"
+                },
+                {
+                  "key": "username",
+                  "value": "cc-itest",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "<Container>\r\n\t<ComplexQuery>\r\n\t\t<Exp Name=\"TrackingNo\" QryType=\"EQ\" Value=\"{{trackingNumber}}\" />\r\n\t</ComplexQuery>\r\n</Container>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://omsqa.homeoffice.anfcorp.com/smcfs/restapi/invoke/getShipmentContainerList?_templateKey=dn_getShipmtContnerLst",
+              "protocol": "https",
+              "host": [
+                "omsqa",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "path": [
+                "smcfs",
+                "restapi",
+                "invoke",
+                "getShipmentContainerList"
+              ],
+              "query": [
+                {
+                  "key": "_templateKey",
+                  "value": "dn_getShipmtContnerLst"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delivery Notification - Delivered",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", () => {\r",
+                  "  pm.response.to.have.status(204);\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');\r",
+                  "\r",
+                  "pm.environment.set('currentDate', moment().format((\"YYYY-MM-DD\")));\r",
+                  "\r",
+                  "pm.environment.set('currentTime', moment().format((\"HH:mm:ss\")));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Correlation-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"shipment_id\": \"{{$guid}}\",\r\n  \"carrier_scac\": \"{{$isoTimestamp}}\",\r\n  \"carrier_name\": \"KIZHUPADA\",\r\n  \"tracking_number\": \"{{trackingNumber}}\",\r\n  \"event_type\": \"delivered\",\r\n  \"bill_of_lading_number\": \"XP73892\",\r\n  \"reference_number\": \"5084946851\",\r\n  \"order_numbers\": [\r\n    \"{{orderNumber}}\"\r\n  ],\r\n  \"event_details\": {\r\n    \"description\": \"Revised Estimated Delivery Date to 02/16/18 - Later\",\r\n    \"local_date\": \"{{currentDate}}\",\r\n    \"local_time\": \"{{currentTime}}\",\r\n    \"type\": \"convey_revised_edd_later\",\r\n    \"utc_offset\": \"Z\",\r\n    \"revised_edd\": \"2018-02-16\",\r\n    \"original_edd\": \"2018-02-14\"\r\n  },\r\n    \"shipment_info\": {\r\n    \"estimated_delivery_date\": \"{{currentDate}}\",\r\n    \"original_estimated_delivery_date\": \"2018-02-14\",\r\n    \"status\": \"delivered\"\r\n  },\r\n  \"delivery_appointment\": {\r\n    \"delivery_appointment_required\": true,\r\n    \"delivery_appointment_message\": \"Delivery appointment message\",\r\n    \"delivery_appointment_date\": \"2017-11-07\",\r\n    \"delivery_appointment_begin_time\": \"10:00:00\",\r\n    \"delivery_appointment_end_time\": \"12:00:00\",\r\n    \"delivery_appointment_begin_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"10:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n    \"delivery_appointment_end_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"12:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n   \"original_delivery_appointment_date\": \"2017-11-01\"\r\n  },\r\n  \"created_date_time\": \"2018-02-14T09:48:01Z\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://{{hostname}}/deliverynotificationproducer/v1/supplychain/v1/carrier-status/delivery-notifications/",
+              "protocol": "https",
+              "host": [
+                "{{hostname}}"
+              ],
+              "path": [
+                "deliverynotificationproducer",
+                "v1",
+                "supplychain",
+                "v1",
+                "carrier-status",
+                "delivery-notifications",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Order - Delivered",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//check for Out Delivered status code, which will be '1600.002.004'\r",
+                  "let responseJson = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Validate For Delivered Status Code\", () => {\r",
+                  "  pm.expect(responseJson.Container[0].Shipment.Status).to.eql(\"1600.002.004\");\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "setTimeout(function(){}, [5000]);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "password",
+                  "value": "passw0rd",
+                  "type": "string"
+                },
+                {
+                  "key": "username",
+                  "value": "cc-itest",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "<Container>\r\n\t<ComplexQuery>\r\n\t\t<Exp Name=\"TrackingNo\" QryType=\"EQ\" Value=\"{{trackingNumber}}\"/>\r\n\t</ComplexQuery>\r\n</Container>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://omsqa.homeoffice.anfcorp.com/smcfs/restapi/invoke/getShipmentContainerList?_templateKey=dn_getShipmtContnerLst",
+              "protocol": "https",
+              "host": [
+                "omsqa",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "path": [
+                "smcfs",
+                "restapi",
+                "invoke",
+                "getShipmentContainerList"
+              ],
+              "query": [
+                {
+                  "key": "_templateKey",
+                  "value": "dn_getShipmtContnerLst"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "DTC HCO CA",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let response = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Check For Tracking Number\", () => {\r",
+                  "  pm.expect(response.result.TrackingNo).to.not.equal(null);\r",
+                  "});\r",
+                  "\r",
+                  "pm.collectionVariables.set(\"trackingNumber\", response.result.TrackingNo);\r",
+                  "pm.collectionVariables.set(\"orderNumber\", response.result.Order_Number);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {
+              "accept": true,
+              "content-type": true
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"countryBrand\": \"h-ca\",\r\n    \"orderStatus\": \"shipped\"\r\n}"
+            },
+            "url": {
+              "raw": "http://suqatascthqa001.homeoffice.anfcorp.com:8090/taas/orderFlow/DTCOrder",
+              "protocol": "http",
+              "host": [
+                "suqatascthqa001",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "port": "8090",
+              "path": [
+                "taas",
+                "orderFlow",
+                "DTCOrder"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delivery Notification - In Transit",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');\r",
+                  "\r",
+                  "pm.environment.set('currentDate', moment().format((\"YYYY-MM-DD\")));\r",
+                  "\r",
+                  "pm.environment.set('currentTime', moment().format((\"HH:mm:ss\")));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", () => {\r",
+                  "  pm.response.to.have.status(204);\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Correlation-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"shipment_id\": \"{{$guid}}\",\r\n  \"carrier_scac\": \"{{$isoTimestamp}}\",\r\n  \"carrier_name\": \"KIZHUPADA\",\r\n  \"tracking_number\": \"{{trackingNumber}}\",\r\n  \"event_type\": \"in_transit\",\r\n  \"bill_of_lading_number\": \"XP73892\",\r\n  \"reference_number\": \"5084946851\",\r\n  \"order_numbers\": [\r\n    \"{{orderNumber}}\"\r\n  ],\r\n  \"event_details\": {\r\n    \"description\": \"Revised Estimated Delivery Date to 02/16/18 - Later\",\r\n    \"local_date\": \"{{currentDate}}\",\r\n    \"local_time\": \"{{currentTime}}\",\r\n    \"type\": \"convey_revised_edd_later\",\r\n    \"utc_offset\": \"Z\",\r\n    \"revised_edd\": \"2018-02-16\",\r\n    \"original_edd\": \"2018-02-14\"\r\n  },\r\n    \"shipment_info\": {\r\n    \"estimated_delivery_date\": \"{{currentDate}}\",\r\n    \"original_estimated_delivery_date\": \"2018-02-14\",\r\n    \"status\": \"in_transit\"\r\n  },\r\n  \"delivery_appointment\": {\r\n    \"delivery_appointment_required\": true,\r\n    \"delivery_appointment_message\": \"Delivery appointment message\",\r\n    \"delivery_appointment_date\": \"2017-11-07\",\r\n    \"delivery_appointment_begin_time\": \"10:00:00\",\r\n    \"delivery_appointment_end_time\": \"12:00:00\",\r\n    \"delivery_appointment_begin_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"10:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n    \"delivery_appointment_end_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"12:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n   \"original_delivery_appointment_date\": \"2017-11-01\"\r\n  },\r\n  \"created_date_time\": \"2018-02-14T09:48:01Z\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://{{hostname}}/deliverynotificationproducer/v1/supplychain/v1/carrier-status/delivery-notifications/",
+              "protocol": "https",
+              "host": [
+                "{{hostname}}"
+              ],
+              "path": [
+                "deliverynotificationproducer",
+                "v1",
+                "supplychain",
+                "v1",
+                "carrier-status",
+                "delivery-notifications",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Order - In Transit",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "setTimeout(function(){}, [5000]);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//check for In Transit status code, which will be '1600.002.001'\r",
+                  "let responseJson = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Validate For In Transit Status Code\", () => {\r",
+                  "  pm.expect(responseJson.Container[0].Shipment.Status).to.eql(\"1600.002.001\");\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "cc-itest",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "passw0rd",
+                  "type": "string"
+                },
+                {
+                  "key": "showPassword",
+                  "value": false,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "<Container>\r\n\t<ComplexQuery>\r\n\t\t<Exp Name=\"TrackingNo\" QryType=\"EQ\" Value=\"{{trackingNumber}}\" />\r\n\t</ComplexQuery>\r\n</Container>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://omsqa.homeoffice.anfcorp.com/smcfs/restapi/invoke/getShipmentContainerList?_templateKey=dn_getShipmtContnerLst",
+              "protocol": "https",
+              "host": [
+                "omsqa",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "path": [
+                "smcfs",
+                "restapi",
+                "invoke",
+                "getShipmentContainerList"
+              ],
+              "query": [
+                {
+                  "key": "_templateKey",
+                  "value": "dn_getShipmtContnerLst"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delivery Notification - Exception",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", () => {\r",
+                  "  pm.response.to.have.status(204);\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');\r",
+                  "\r",
+                  "pm.environment.set('currentDate', moment().format((\"YYYY-MM-DD\")));\r",
+                  "\r",
+                  "pm.environment.set('currentTime', moment().format((\"HH:mm:ss\")));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Correlation-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"shipment_id\": \"{{$guid}}\",\r\n  \"carrier_scac\": \"{{$isoTimestamp}}\",\r\n  \"carrier_name\": \"KIZHUPADA\",\r\n  \"tracking_number\": \"{{trackingNumber}}\",\r\n  \"event_type\": \"exception\",\r\n  \"bill_of_lading_number\": \"XP73892\",\r\n  \"reference_number\": \"5084946851\",\r\n  \"order_numbers\": [\r\n    \"{{orderNumber}}\"\r\n  ],\r\n  \"event_details\": {\r\n    \"description\": \"Revised Estimated Delivery Date to 02/16/18 - Later\",\r\n    \"local_date\": \"{{currentDate}}\",\r\n    \"local_time\": \"{{currentTime}}\",\r\n    \"type\": \"convey_revised_edd_later\",\r\n    \"utc_offset\": \"Z\",\r\n    \"revised_edd\": \"2018-02-16\",\r\n    \"original_edd\": \"2018-02-14\"\r\n  },\r\n    \"shipment_info\": {\r\n    \"estimated_delivery_date\": \"{{currentDate}}\",\r\n    \"original_estimated_delivery_date\": \"2018-02-14\",\r\n    \"status\": \"exception\"\r\n  },\r\n  \"delivery_appointment\": {\r\n    \"delivery_appointment_required\": true,\r\n    \"delivery_appointment_message\": \"Delivery appointment message\",\r\n    \"delivery_appointment_date\": \"2017-11-07\",\r\n    \"delivery_appointment_begin_time\": \"10:00:00\",\r\n    \"delivery_appointment_end_time\": \"12:00:00\",\r\n    \"delivery_appointment_begin_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"10:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n    \"delivery_appointment_end_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"12:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n   \"original_delivery_appointment_date\": \"2017-11-01\"\r\n  },\r\n  \"created_date_time\": \"2018-02-14T09:48:01Z\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://{{hostname}}/deliverynotificationproducer/v1/supplychain/v1/carrier-status/delivery-notifications/",
+              "protocol": "https",
+              "host": [
+                "{{hostname}}"
+              ],
+              "path": [
+                "deliverynotificationproducer",
+                "v1",
+                "supplychain",
+                "v1",
+                "carrier-status",
+                "delivery-notifications",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Order - Exception",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//check for Exception status code, which will be '1600.002.002'\r",
+                  "let responseJson = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Validate For Exception Status Code\", () => {\r",
+                  "  pm.expect(responseJson.Container[0].Shipment.Status).to.eql(\"1600.002.002\");\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "setTimeout(function(){}, [5000]);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "password",
+                  "value": "passw0rd",
+                  "type": "string"
+                },
+                {
+                  "key": "username",
+                  "value": "cc-itest",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "<Container>\r\n\t<ComplexQuery>\r\n\t\t<Exp Name=\"TrackingNo\" QryType=\"EQ\" Value=\"{{trackingNumber}}\" />\r\n\t</ComplexQuery>\r\n</Container>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://omsqa.homeoffice.anfcorp.com/smcfs/restapi/invoke/getShipmentContainerList?_templateKey=dn_getShipmtContnerLst",
+              "protocol": "https",
+              "host": [
+                "omsqa",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "path": [
+                "smcfs",
+                "restapi",
+                "invoke",
+                "getShipmentContainerList"
+              ],
+              "query": [
+                {
+                  "key": "_templateKey",
+                  "value": "dn_getShipmtContnerLst"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delivery Notification - Out For Delivery",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", () => {\r",
+                  "  pm.response.to.have.status(204);\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');\r",
+                  "\r",
+                  "pm.environment.set('currentDate', moment().format((\"YYYY-MM-DD\")));\r",
+                  "\r",
+                  "pm.environment.set('currentTime', moment().format((\"HH:mm:ss\")));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Correlation-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"shipment_id\": \"{{$guid}}\",\r\n  \"carrier_scac\": \"{{$isoTimestamp}}\",\r\n  \"carrier_name\": \"KIZHUPADA\",\r\n  \"tracking_number\": \"{{trackingNumber}}\",\r\n  \"event_type\": \"out_for_delivery\",\r\n  \"bill_of_lading_number\": \"XP73892\",\r\n  \"reference_number\": \"5084946851\",\r\n  \"order_numbers\": [\r\n    \"{{orderNumber}}\"\r\n  ],\r\n  \"event_details\": {\r\n    \"description\": \"Revised Estimated Delivery Date to 02/16/18 - Later\",\r\n    \"local_date\": \"{{currentDate}}\",\r\n    \"local_time\": \"{{currentTime}}\",\r\n    \"type\": \"convey_revised_edd_later\",\r\n    \"utc_offset\": \"Z\",\r\n    \"revised_edd\": \"2018-02-16\",\r\n    \"original_edd\": \"2018-02-14\"\r\n  },\r\n    \"shipment_info\": {\r\n    \"estimated_delivery_date\": \"{{currentDate}}\",\r\n    \"original_estimated_delivery_date\": \"2018-02-14\",\r\n    \"status\": \"out_for_delivery\"\r\n  },\r\n  \"delivery_appointment\": {\r\n    \"delivery_appointment_required\": true,\r\n    \"delivery_appointment_message\": \"Delivery appointment message\",\r\n    \"delivery_appointment_date\": \"2017-11-07\",\r\n    \"delivery_appointment_begin_time\": \"10:00:00\",\r\n    \"delivery_appointment_end_time\": \"12:00:00\",\r\n    \"delivery_appointment_begin_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"10:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n    \"delivery_appointment_end_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"12:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n   \"original_delivery_appointment_date\": \"2017-11-01\"\r\n  },\r\n  \"created_date_time\": \"2018-02-14T09:48:01Z\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://{{hostname}}/deliverynotificationproducer/v1/supplychain/v1/carrier-status/delivery-notifications/",
+              "protocol": "https",
+              "host": [
+                "{{hostname}}"
+              ],
+              "path": [
+                "deliverynotificationproducer",
+                "v1",
+                "supplychain",
+                "v1",
+                "carrier-status",
+                "delivery-notifications",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Order - Out For Delivery",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//check for Out For Delivery status code, which will be '1600.002.003'\r",
+                  "let responseJson = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Validate For Out For Delivery Status Code\", () => {\r",
+                  "  pm.expect(responseJson.Container[0].Shipment.Status).to.eql(\"1600.002.003\");\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "setTimeout(function(){}, [5000]);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "password",
+                  "value": "passw0rd",
+                  "type": "string"
+                },
+                {
+                  "key": "username",
+                  "value": "cc-itest",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "<Container>\r\n\t<ComplexQuery>\r\n\t\t<Exp Name=\"TrackingNo\" QryType=\"EQ\" Value=\"{{trackingNumber}}\" />\r\n\t</ComplexQuery>\r\n</Container>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://omsqa.homeoffice.anfcorp.com/smcfs/restapi/invoke/getShipmentContainerList?_templateKey=dn_getShipmtContnerLst",
+              "protocol": "https",
+              "host": [
+                "omsqa",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "path": [
+                "smcfs",
+                "restapi",
+                "invoke",
+                "getShipmentContainerList"
+              ],
+              "query": [
+                {
+                  "key": "_templateKey",
+                  "value": "dn_getShipmtContnerLst"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delivery Notification - Delivered",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\r",
+                  "  pm.response.to.have.status(200);\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');\r",
+                  "\r",
+                  "pm.environment.set('currentDate', moment().format((\"YYYY-MM-DD\")));\r",
+                  "\r",
+                  "pm.environment.set('currentTime', moment().format((\"HH:mm:ss\")));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Correlation-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"shipment_id\": \"{{$guid}}\",\r\n  \"carrier_scac\": \"{{$isoTimestamp}}\",\r\n  \"carrier_name\": \"KIZHUPADA\",\r\n  \"tracking_number\": \"{{trackingNumber}}\",\r\n  \"event_type\": \"delivered\",\r\n  \"bill_of_lading_number\": \"XP73892\",\r\n  \"reference_number\": \"5084946851\",\r\n  \"order_numbers\": [\r\n    \"{{orderNumber}}\"\r\n  ],\r\n  \"event_details\": {\r\n    \"description\": \"Revised Estimated Delivery Date to 02/16/18 - Later\",\r\n    \"local_date\": \"{{currentDate}}\",\r\n    \"local_time\": \"{{currentTime}}\",\r\n    \"type\": \"convey_revised_edd_later\",\r\n    \"utc_offset\": \"Z\",\r\n    \"revised_edd\": \"2018-02-16\",\r\n    \"original_edd\": \"2018-02-14\"\r\n  },\r\n    \"shipment_info\": {\r\n    \"estimated_delivery_date\": \"{{currentDate}}\",\r\n    \"original_estimated_delivery_date\": \"2018-02-14\",\r\n    \"status\": \"delivered\"\r\n  },\r\n  \"delivery_appointment\": {\r\n    \"delivery_appointment_required\": true,\r\n    \"delivery_appointment_message\": \"Delivery appointment message\",\r\n    \"delivery_appointment_date\": \"2017-11-07\",\r\n    \"delivery_appointment_begin_time\": \"10:00:00\",\r\n    \"delivery_appointment_end_time\": \"12:00:00\",\r\n    \"delivery_appointment_begin_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"10:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n    \"delivery_appointment_end_timestamp_info\": {\r\n      \"local_date\":\"2017-11-07\",\r\n      \"local_time\":\"12:00:00\",\r\n      \"zone_offset\":\"+02:00\"\r\n     },\r\n   \"original_delivery_appointment_date\": \"2017-11-01\"\r\n  },\r\n  \"created_date_time\": \"2018-02-14T09:48:01Z\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://{{hostname}}/omsdeliverynotificationconsumer/delivery-notification-avro-producer/produce",
+              "protocol": "https",
+              "host": [
+                "{{hostname}}"
+              ],
+              "path": [
+                "omsdeliverynotificationconsumer",
+                "delivery-notification-avro-producer",
+                "produce"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Order - Delivered",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//check for Delivered status code, which will be '1600.002.004'\r",
+                  "let responseJson = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Validate For Delivered Status Code\", () => {\r",
+                  "  pm.expect(responseJson.Container[0].Shipment.Status).to.eql(\"1600.002.004\");\r",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "setTimeout(function(){}, [5000]);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "password",
+                  "value": "passw0rd",
+                  "type": "string"
+                },
+                {
+                  "key": "username",
+                  "value": "cc-itest",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "<Container>\r\n\t<ComplexQuery>\r\n\t\t<Exp Name=\"TrackingNo\" QryType=\"EQ\" Value=\"{{trackingNumber}}\" />\r\n\t</ComplexQuery>\r\n</Container>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://omsqa.homeoffice.anfcorp.com/smcfs/restapi/invoke/getShipmentContainerList?_templateKey=dn_getShipmtContnerLst",
+              "protocol": "https",
+              "host": [
+                "omsqa",
+                "homeoffice",
+                "anfcorp",
+                "com"
+              ],
+              "path": [
+                "smcfs",
+                "restapi",
+                "invoke",
+                "getShipmentContainerList"
+              ],
+              "query": [
+                {
+                  "key": "_templateKey",
+                  "value": "dn_getShipmtContnerLst"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "trackingNumber",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "currentTransactionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orderNumber",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
