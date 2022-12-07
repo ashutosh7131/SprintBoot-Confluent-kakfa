@@ -1,0 +1,84 @@
+
+## CONSUMER CONFIGURATION ##
+# IMPORTANT: Please uncomment following configuration section if your application is a Kafka consumer.
+
+#consumer:
+#  enable: true
+
+#autoscale:
+#  enable: true
+#  pollinterval: 30 #this is how often autoscaling will check the consumer lag
+#  minreplica: 1
+#  maxreplica: 6 #this should match the number of partitions available in your topic
+#  consumergroup: kafka-service-group #this is the consumer name -- this must match exactly what you use in your application code
+#  kafkatopic: kafka-topic #this is your topic name
+
+## END CONSUMER CONFIGURATION ##
+version: v1
+
+configMap:
+  keys:
+    - name:  SBA_ADMIN_URL
+      value: http://spring-boot-admin
+    - name:  ANF_LOGGER_LOG_LEVEL_STDOUT
+      value: WARN
+    - name:  ANF_LOGGER_LOG_LEVEL_AGGREGATE
+      value: ERROR
+    - name:  ANF_LOGGER_LOG_LEVEL_HTTPTRACE
+      value: TRACE
+
+env:
+  - name: "PORT"
+    value: "8080"
+  - name: "userAssignedIdentity"
+    value: "1a89aafb-fe98-4118-9179-3c535ae301d6"
+  - name: "keyvault.uri"
+    value: "https://gdi-int-dv-kv.vault.azure.net/"
+
+routingenabled: true
+service:
+  port: 8080
+  timeoutSeconds: 5
+  periodSeconds: 10
+  healthcheckurl: "/well-known/heartbeat"
+
+deployment:
+  replicaCount: 1
+  weight: 100
+  image:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 300Mi
+      limits:
+        cpu: 200m
+        memory: 300Mi
+
+istio:
+  host:
+    - "api.dv.int.anfcloud.com"
+  internalhostprefix: "svc.cluster.local"
+
+authorization:
+  enabled: false
+
+virtualService:
+  versionenabled: true
+# Example for route rewrite
+#  routes:
+#   - match: /sample/client-endpoint
+#     rewrite: /sample/target-endpoint-with-in-cluster
+
+
+## API CONFIGURATION ##
+# IMPORTANT: Please uncomment following configuration to enable autoscaling if your application is a REST API/ Kafka producer API.
+
+#autoscaler:
+#  enabled: true
+#  minReplicas: 1
+#  maxReplicas: 2
+#  cpuTargetAverageUtilization: 50
+#  memoryTargetAverageUtilization: 70
+#  targetRef: Deployment
+
+## END OF API CONFIGURATION ##

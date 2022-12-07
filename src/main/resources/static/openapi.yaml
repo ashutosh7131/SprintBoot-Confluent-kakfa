@@ -1,0 +1,108 @@
+---
+openapi: 3.0.1
+
+info:
+  title: SalesTopicMessage API - Spring Boot (REPLACE WITH SWAGGERHUB API DEFINITION)
+  
+  contact:
+    email: you@your-company.com
+  
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  
+  description: |-
+    This is a sample API to demonstrate best practices and standards for:
+      - Coding
+      - Unit tests
+      - API Development          
+
+
+    <br/><br/>
+
+    <hr/>
+
+    # Sunset and Deprecation Information
+    ## Version
+    There is no planned version deprecation date at this time
+    ## Endpoints
+    There are no planned deprecation for any endpoints at this time
+
+    <hr/>
+
+    # Rate Limit Information
+    The endpoints on this API can be called 1000 times per day
+    <hr/>
+
+    # Release Notes
+    ## Endpoints
+    ### Additions
+        Example: GET /well-known/heartbeat
+    ### Changes
+        Example: GET /well-known/heartbeat
+    ### Deletions
+        Example: GET /well-known/heartbeat
+
+    ## Bug Fixes
+        Example: Fixed /well-known/heartbeat
+    
+    <hr/>
+
+    # Sample Code & Utilization
+    To find out more infomration on how to use this API, go here:  [api-samples](https://github.com/fusionalliance/A-F-POC/tree/master/api-samples)
+  
+  version: v1
+
+servers:
+  - url: http://localhost:8080
+    description: Local Development Server.
+
+paths:
+  /well-known/heartbeat:
+    get:
+      tags:
+        - Availability
+      summary: Heartbeat endpoint to monitor the status of the API.
+      operationId: Heartbeat endpoint.
+      description: This method doesn't take any input parameters and empty body is sent in response
+      parameters:
+        - name: correlation-id
+          description: Correlation-ID for the request.
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 933ffb9e-8005-47de-8780-ce9f529278f4
+      responses:
+        '204':
+          description: Successful response
+        '400':
+          description: Bad request
+        '404':
+          description: Resource Not found
+        '500':
+          description: Error response
+        default:
+          description: error
+  /examples/error:
+    get:
+      tags:
+        - Examples
+      summary: This endpoint will generate an example error to demonstrate error handling.
+      operationId: Error endpoint.
+      description: This method doesn't take any input parameters and 400 will be sent as response
+      parameters:
+        - name: correlation-id
+          description: Correlation-ID for the request.
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 933ffb9e-8005-47de-8780-ce9f529278f4
+      responses:
+        '400':
+          description: Bad request
+        default:
+          description: error
